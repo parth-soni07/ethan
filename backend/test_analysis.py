@@ -1,6 +1,6 @@
 import pandas as pd
 
-from backend.analysis import day_ahead, join, metrics
+from backend.analysis import accuracy, day_ahead, join, metrics
 
 T = lambda s: pd.Timestamp(s, tz="UTC")
 
@@ -23,3 +23,12 @@ def test_metrics_sign_and_shortfall():
     m = metrics(join(fc, act))
     assert m["mae"] == 10 and m["bias"] == 0 and m["rmse"] == 10
     assert m["p90_shortfall"] > 0  # over-forecast hour means buying extra
+
+
+def test_accuracy_breakdowns_cover_every_hour():
+    r = accuracy("09:00")
+    n = r["overall"]["n"]
+    assert n == 31 * 24  # one hourly day-ahead forecast per hour of January
+    for key in ("by_day", "by_hour", "by_level"):
+        assert sum(x["n"] for x in r[key]) == n, key
+    assert sum(b["count"] for b in r["histogram"]) == n

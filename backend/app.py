@@ -1,3 +1,4 @@
+from datetime import date as Date
 from pathlib import Path
 
 from fastapi import FastAPI, Query
@@ -10,8 +11,8 @@ CUTOFF = Query("09:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$", description="D-1 g
 
 
 @app.get("/api/day")
-def day(date: str = Query(..., pattern=r"^2026-01-\d{2}$"), cutoff: str = CUTOFF):
-    return analysis.day(date, cutoff)
+def day(date: Date = Query(..., ge=Date(2026, 1, 1), le=Date(2026, 1, 31)), cutoff: str = CUTOFF):
+    return analysis.day(date.isoformat(), cutoff)
 
 
 @app.get("/api/accuracy")
@@ -20,6 +21,6 @@ def accuracy(cutoff: str = CUTOFF):
 
 
 # Docker image serves the built UI too; on Vercel the static build is served by the CDN.
-dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+dist = Path(__file__).resolve().parent.parent / "frontend" / "out"
 if dist.is_dir():
     app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
