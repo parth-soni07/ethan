@@ -3,3 +3,5 @@ frontend/out
 .venv
 .git
 frontend/.next
+backend/test_*.py
+backend/conftest.py

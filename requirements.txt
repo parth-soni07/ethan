@@ -1,4 +1,6 @@
-fastapi==0.115.*
-pandas==2.2.*
-uvicorn==0.32.*
-pytest==8.*
+# Runtime (Docker image and Vercel function). Python 3.12; see .python-version.
+fastapi==0.162.0
+starlette==0.52.1  # >= 0.49.1 for CVE-2025-62727 (StaticFiles Range header)
+pandas==2.2.3
+numpy==2.4.6
+uvicorn==0.32.1

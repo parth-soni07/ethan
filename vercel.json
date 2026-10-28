@@ -5,6 +5,14 @@
     "api/index.py": { "includeFiles": "{backend,data}/**" }
   },
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    },
     { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, s-maxage=86400" }] }
   ],
   "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]

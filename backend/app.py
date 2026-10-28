@@ -1,17 +1,35 @@
 from datetime import date as Date
 from pathlib import Path
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 
 from backend import analysis
 
+analysis.load()  # fail at boot, not on the first request, if the data snapshot is missing or bad
+
 app = FastAPI(title="UK wind day-ahead forecast accuracy")
-CUTOFF = Query("09:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$", description="D-1 gate time, UK local")
+CUTOFF = Query(analysis.DEFAULT_CUTOFF, pattern=r"^([01]\d|2[0-3]):[0-5]\d$",
+               description="Decision time on the day before delivery, UK local (HH:MM)")
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.update(SECURITY_HEADERS)
+    return response
 
 
 @app.get("/api/day")
-def day(date: Date = Query(..., ge=Date(2026, 1, 1), le=Date(2026, 1, 31)), cutoff: str = CUTOFF):
+def day(date: Date, cutoff: str = CUTOFF):
+    first, last = analysis.date_range()
+    if not first <= date.isoformat() <= last:
+        raise HTTPException(422, f"date must be between {first} and {last}")
     return analysis.day(date.isoformat(), cutoff)
 
 

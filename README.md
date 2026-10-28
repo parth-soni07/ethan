@@ -23,14 +23,17 @@ and the analysis.
   covered the shortfall in 90% of hours.
 - `WINDFOR` is hourly and `FUELHH` is half-hourly, so they are compared at hourly `startTime`s.
 
-## Finding: the forecast runs high, more so when it is windy
+## Finding: the forecast runs high, most of all when it is windy
 
-Day-ahead forecasts over-forecast delivered wind by about 1.9 GW on average. Forecasts made under 6
-hours ahead are also about 1.5 GW high (`by_lead` 0-6h), and the gap grows with wind level (+0.6 GW below 5 GW of
-forecast wind, +4.5 GW above 20 GW). That fits curtailment, where wind farms are paid to turn down
-when the grid can't take their output, so metered `FUELHH` output falls below the unconstrained
-`WINDFOR` forecast. It is a hypothesis: confirming it needs balancing-action data, which is outside
-this brief's Elexon wind-only scope.
+All figures are at the default 09:00 cutoff (`backend/test_analysis.py` pins them to the data).
+Day-ahead forecasts over-forecast delivered wind by about 1.9 GW on average. Forecasts made 0-6
+hours ahead are still about 1.5 GW high, so it is not only a lead-time effect. The gap is largest at
+high wind: +4.5 GW when 20 GW or more is forecast, against +0.6 GW below 5 GW (a small band: 30
+hours). That is consistent with curtailment, where wind farms are paid to turn down when the grid
+can't take their output, so metered `FUELHH` output falls below the unconstrained `WINDFOR`
+forecast. It is a hypothesis: confirming it needs balancing-action data, which is outside this
+brief's Elexon wind-only scope. A simulation test (`test_simulated_curtailment_shows_bias_growing_with_wind_level`)
+shows that capped output produces exactly this pattern.
 
 ## Layout
 
@@ -39,7 +42,10 @@ this brief's Elexon wind-only scope.
 | `backend/fetch_data.py` | One-off pull of the January 2026 window from BMRS into `data/*.csv` |
 | `backend/analysis.py` | Day-ahead forecast selection + MAE/RMSE/bias/MAPE/P90, by day, hour, lead time and forecast level, plus an error histogram |
 | `backend/app.py` | FastAPI: `GET /api/day?date=&cutoff=`, `GET /api/accuracy?cutoff=`; also serves the built UI |
-| `backend/test_analysis.py` | pytest |
+| `backend/test_analysis.py` | Unit and edge-case tests: cutoff boundaries, UK clock changes, joins, metrics, real-data golden values |
+| `backend/test_simulation.py` | Simulation tests: a synthetic month with known bias and noise, checked against the right answer |
+| `backend/test_api.py` | HTTP contract, input validation (422s) and security headers |
+| `backend/test_fetch.py` | `fetch_data` dedupe and date windows with BMRS mocked out |
 | `api/index.py` | Vercel Python entrypoint |
 | `frontend/` | Next.js (App Router, static export) + Recharts UI; claymorphism surfaces on an Apple system palette |
 | `data/` | Committed BMRS snapshot (the data is historical, so it is not fetched live) |
@@ -50,13 +56,13 @@ this brief's Elexon wind-only scope.
 # Docker (API + UI on :8000)
 docker build -t wind . && docker run -p 8000:8000 wind
 
-# Local dev
-python -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Local dev (Python 3.12: pandas 2.2 has no wheels for 3.13+)
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/uvicorn backend.app:app --reload        # API on :8000
 cd frontend && npm install && npm run dev          # UI on :3000, proxies /api to :8000
 
-# Tests / refresh data
-.venv/bin/python -m pytest -q backend
+# Tests (warnings are errors; config in pytest.ini) / refresh data
+.venv/bin/pytest -q
 .venv/bin/python -m backend.fetch_data
 ```
 
