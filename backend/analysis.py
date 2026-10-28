@@ -58,6 +58,7 @@ def metrics(df: pd.DataFrame) -> dict:
         "mae": float(e.abs().mean()),
         "rmse": float(np.sqrt((e ** 2).mean())),
         "bias": float(e.mean()),
+        "actual_mean": float(df["actual"].mean()),  # delivered wind, MW (drives the UI's turbine speed)
         "mape": float((e[positive].abs() / df.loc[positive, "actual"]).mean() * 100) if positive.any() else None,
         # MW of extra procurement that would have covered the shortfall in 90% of hours.
         "p90_shortfall": float(max(e.quantile(0.9), 0)),

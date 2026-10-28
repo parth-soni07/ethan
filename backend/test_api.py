@@ -13,7 +13,7 @@ def test_day_shape():
     body = r.json()
     assert set(body) == {"date", "metrics", "points"} and body["date"] == "2026-01-15"
     assert set(body["points"][0]) == {"startTime", "actual", "forecast", "publishTime"}
-    assert set(body["metrics"]) == {"n", "mae", "rmse", "bias", "mape", "p90_shortfall"}
+    assert set(body["metrics"]) == {"n", "mae", "rmse", "bias", "mape", "p90_shortfall", "actual_mean"}
 
 
 def test_accuracy_shape_and_default_cutoff():

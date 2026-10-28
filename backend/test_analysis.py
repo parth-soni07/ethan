@@ -111,7 +111,7 @@ def joined(fc_values, act_values):
 
 def test_metrics_hand_computed():
     m = metrics(joined([110, 80, 130, 100, 100], [100, 100, 100, 100, 50]))  # errors 10,-20,30,0,50
-    assert m == pytest.approx({"n": 5, "mae": 22, "rmse": math.sqrt(780), "bias": 14, "mape": 32,
+    assert m == pytest.approx({"n": 5, "mae": 22, "rmse": math.sqrt(780), "bias": 14, "mape": 32, "actual_mean": 90,
                                "p90_shortfall": 42})
 
 
@@ -122,7 +122,8 @@ def test_all_under_forecast_needs_no_backup():
 
 def test_single_row():
     m = metrics(joined([120], [100]))
-    assert m == pytest.approx({"n": 1, "mae": 20, "rmse": 20, "bias": 20, "mape": 20, "p90_shortfall": 20})
+    assert m == pytest.approx({"n": 1, "mae": 20, "rmse": 20, "bias": 20, "mape": 20, "p90_shortfall": 20,
+                               "actual_mean": 100})
 
 
 def test_zero_actual_is_excluded_from_mape_and_json_safe():
