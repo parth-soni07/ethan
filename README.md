@@ -5,6 +5,9 @@ national wind forecast (Elexon BMRS `WINDFOR`) that was available at the day-ahe
 against actual wind generation (`FUELHH`, fuelType `WIND`), and measures how wrong those forecasts
 were across January 2026.
 
+**Live app:** https://old-champagne.vercel.app · **Live API:** https://ethan-flax.vercel.app (try
+[`/api/accuracy`](https://ethan-flax.vercel.app/api/accuracy) or the [docs](https://ethan-flax.vercel.app/docs))
+
 The UI lives in a separate repo: [old-champagne](https://github.com/parth-soni07/old-champagne).
 
 ## AI tools disclosure
@@ -85,6 +88,8 @@ ALLOWED_ORIGINS=http://localhost:3000 .venv/bin/uvicorn backend.app:app --reload
 
 ## Deploy
 
-`vercel deploy`: `vercel.json` runs `api/index.py` as a Python function and caches API responses at
-the edge for a day (the data is static). Set `ALLOWED_ORIGINS` to the UI's URL. The Dockerfile also
+`vercel deploy --prod`: Vercel detects the FastAPI app (framework preset) and runs it as one Python
+function; `vercel.json` adds security headers and caches API responses at the edge for a day (the
+data is static). Set `ALLOWED_ORIGINS` to the UI's URL; responses always `Vary: Origin`, so cached
+copies keep the right CORS header. The first request after idle is a cold start (~3 s). The Dockerfile also
 runs as-is on any container host (non-root user, health check).
