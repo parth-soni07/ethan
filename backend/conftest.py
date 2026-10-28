@@ -21,11 +21,16 @@ def actuals(rows=()):
     return frame(rows, ["startTime", "generation"])
 
 
+CACHES = (analysis.accuracy, analysis._day_ahead_for, analysis.date_range)
+
+
 @pytest.fixture(autouse=True)
-def fresh_accuracy_cache():
-    analysis.accuracy.cache_clear()
+def fresh_caches():
+    for c in CACHES:
+        c.cache_clear()
     yield
-    analysis.accuracy.cache_clear()
+    for c in CACHES:
+        c.cache_clear()
 
 
 @pytest.fixture

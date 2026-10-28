@@ -23,6 +23,7 @@ def load() -> tuple[pd.DataFrame, pd.DataFrame]:
     return actuals, forecasts
 
 
+@cache
 def date_range() -> tuple[str, str]:
     """First and last UK delivery day covered by the actuals."""
     days = load()[0]["startTime"].dt.tz_convert(UK).dt.strftime("%Y-%m-%d")
@@ -68,7 +69,7 @@ def metrics(df: pd.DataFrame) -> dict:
 @lru_cache(maxsize=64)  # data is static; warm serverless instances reuse results per cutoff
 def accuracy(cutoff: str = DEFAULT_CUTOFF) -> dict:
     actuals, forecasts = load()
-    da = join(day_ahead(forecasts, cutoff), actuals)
+    da = join(_day_ahead_for(cutoff), actuals)
     local = da["startTime"].dt.tz_convert(UK)
     da["hour"], da["day"] = local.dt.hour, local.dt.strftime("%Y-%m-%d")
     da["level"] = pd.cut(da["forecast"], LEVEL_BANDS, labels=LEVEL_LABELS, right=False)
@@ -97,12 +98,18 @@ def accuracy(cutoff: str = DEFAULT_CUTOFF) -> dict:
     }
 
 
+@lru_cache(maxsize=64)
+def _day_ahead_for(cutoff: str) -> pd.DataFrame:
+    """day_ahead() over the loaded data, once per cutoff: every /api/day click reuses it."""
+    return day_ahead(load()[1], cutoff)
+
+
 def day(date: str, cutoff: str = DEFAULT_CUTOFF) -> dict:
-    actuals, forecasts = load()
+    actuals, _ = load()
     # Local midnight to local midnight: 23 or 25 hours on clock-change days.
     start, end = (pd.Timestamp(d).tz_localize(UK) for d in (date, pd.Timestamp(date) + pd.Timedelta(days=1)))
     window = lambda df: df[(df["startTime"] >= start) & (df["startTime"] < end)]
-    da, act = window(day_ahead(forecasts, cutoff)), window(actuals)
+    da, act = window(_day_ahead_for(cutoff)), window(actuals)
     joined = join(da, act)
     out = act.merge(da, on="startTime", how="left", suffixes=("_act", "_fc")).sort_values("startTime")
     return {
