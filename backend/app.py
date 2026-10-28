@@ -38,6 +38,12 @@ def accuracy(cutoff: str = CUTOFF):
     return analysis.accuracy(cutoff)
 
 
+# Unknown /api paths get a JSON 404 here rather than the UI's HTML 404 from the static mount.
+@app.api_route("/api/{rest:path}", methods=["GET", "HEAD"], include_in_schema=False)
+def api_not_found(rest: str):
+    raise HTTPException(404, "Not Found")
+
+
 # Docker image serves the built UI too; on Vercel the static build is served by the CDN.
 dist = Path(__file__).resolve().parent.parent / "frontend" / "out"
 if dist.is_dir():

@@ -45,8 +45,10 @@ def test_accuracy_rejects_bad_cutoff(cutoff):
     assert client.get("/api/accuracy", params={"cutoff": cutoff}).status_code == 422
 
 
-def test_unknown_api_route_is_404():
-    assert client.get("/api/nope").status_code == 404
+@pytest.mark.parametrize("path", ["/api/nope", "/api/accuracy/", "/api/day/extra"])
+def test_unknown_api_route_is_a_json_404(path):
+    r = client.get(path)
+    assert r.status_code == 404 and r.headers["content-type"] == "application/json"
 
 
 @pytest.mark.parametrize("path", ["/api/accuracy", "/api/nope"])
