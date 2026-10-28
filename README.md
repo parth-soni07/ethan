@@ -25,8 +25,8 @@ and the analysis.
 
 ## Finding: the forecast runs high, more so when it is windy
 
-Day-ahead forecasts over-forecast delivered wind by about 1.9 GW on average. Forecasts made under 2
-hours ahead are also about 1.6 GW high, and the gap grows with wind level (+0.6 GW below 5 GW of
+Day-ahead forecasts over-forecast delivered wind by about 1.9 GW on average. Forecasts made under 6
+hours ahead are also about 1.5 GW high (`by_lead` 0-6h), and the gap grows with wind level (+0.6 GW below 5 GW of
 forecast wind, +4.5 GW above 20 GW). That fits curtailment, where wind farms are paid to turn down
 when the grid can't take their output, so metered `FUELHH` output falls below the unconstrained
 `WINDFOR` forecast. It is a hypothesis: confirming it needs balancing-action data, which is outside

@@ -8,7 +8,7 @@ import pandas as pd
 DATA = Path(__file__).resolve().parent.parent / "data"
 UK = "Europe/London"
 LEAD_BUCKETS = [0, 6, 12, 24, 36, 48, 72]
-LEVEL_BANDS = [0, 5000, 10000, 15000, 20000, 30000]
+LEVEL_BANDS = [0, 5000, 10000, 15000, 20000, np.inf]
 
 
 @cache
@@ -61,7 +61,8 @@ def accuracy(cutoff: str = "09:00") -> dict:
     allf["lead_h"] = (allf["startTime"] - allf["publishTime"]).dt.total_seconds() / 3600
     allf = allf[allf["lead_h"] >= 0]
     allf["lead"] = pd.cut(allf["lead_h"], LEAD_BUCKETS, right=False)
-    counts, edges = np.histogram(da["error"].clip(-8000, 11999), bins=range(-8000, 12001, 1000))
+    lo, hi = (int(np.floor(da["error"].min() / 1000)) * 1000, int(np.ceil(da["error"].max() / 1000)) * 1000)
+    counts, edges = np.histogram(da["error"], bins=range(lo, max(hi, lo + 1000) + 1, 1000))
     return {
         "cutoff": cutoff,
         "overall": metrics(da),
@@ -71,7 +72,8 @@ def accuracy(cutoff: str = "09:00") -> dict:
                     for iv, g in allf.groupby("lead", observed=True)],
         # Over-forecast grows with wind level: the signature of curtailment (metered output is
         # constrained off when the grid can't take it), so bias is not a constant offset.
-        "by_level": [{"level": f"{iv.left // 1000}-{iv.right // 1000} GW", **metrics(g)}
+        "by_level": [{"level": f"{int(iv.left) // 1000}{'+' if iv.right == np.inf else f'-{int(iv.right) // 1000}'} GW",
+                      **metrics(g)}
                      for iv, g in da.groupby("level", observed=True)],
         "histogram": [{"from": int(lo), "to": int(lo + 1000), "count": int(c)}
                       for lo, c in zip(edges[:-1], counts)],
