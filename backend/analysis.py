@@ -76,6 +76,7 @@ def accuracy(cutoff: str = DEFAULT_CUTOFF) -> dict:
     allf["lead_h"] = (allf["startTime"] - allf["publishTime"]).dt.total_seconds() / 3600
     allf = allf[allf["lead_h"] >= 0]
     allf["lead"] = pd.cut(allf["lead_h"], LEAD_BUCKETS, right=False)
+    da_lead = (da["startTime"] - da["publishTime"]).dt.total_seconds() / 3600
     lo, hi = np.floor(da["error"].min() / BIN) * BIN, np.ceil(da["error"].max() / BIN) * BIN
     counts, edges = np.histogram(da["error"], bins=np.arange(lo, max(hi, lo + BIN) + 1, BIN))
     return {
@@ -83,8 +84,10 @@ def accuracy(cutoff: str = DEFAULT_CUTOFF) -> dict:
         "overall": metrics(da),
         "by_day": [{"day": d, **metrics(g)} for d, g in da.groupby("day")],
         "by_hour": [{"hour": h, **metrics(g)} for h, g in da.groupby("hour")],
-        "by_lead": [{"lead": f"{iv.left}-{iv.right}h", **metrics(g)}
+        "by_lead": [{"lead": f"{iv.left}-{iv.right}h", "lo": int(iv.left), "hi": int(iv.right), **metrics(g)}
                     for iv, g in allf.groupby("lead", observed=True)],
+        # How far ahead the day-ahead forecasts were made, so the UI can mark where a buyer sits.
+        "day_ahead_lead_h": [float(da_lead.min()), float(da_lead.max())],
         # Over-forecast that grows with wind level is consistent with curtailment (metered output
         # constrained off when the grid can't take it). A hypothesis; see README.
         "by_level": [{"level": lvl, **metrics(g)}

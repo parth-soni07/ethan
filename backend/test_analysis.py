@@ -149,6 +149,9 @@ def test_breakdowns_on_a_synthetic_day(use_data):
     assert sum(x["n"] for x in r["by_lead"]) == 48
     assert next(x for x in r["by_lead"] if x["lead"] == "0-6h")["n"] == 24
     assert r["histogram"] == [{"from": 3000, "to": 4000, "count": 24}]
+    assert r["day_ahead_lead_h"] == [16, 39]  # 00:00..23:00 on the 15th, published 08:00 on the 14th
+    zero_six = next(x for x in r["by_lead"] if x["lead"] == "0-6h")
+    assert (zero_six["lo"], zero_six["hi"]) == (0, 6)
 
 
 def test_histogram_bins_are_contiguous_and_cover_every_hour():

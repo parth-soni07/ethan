@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS ui
 WORKDIR /ui
 COPY frontend/package*.json ./
@@ -8,7 +9,8 @@ RUN npm run build
 FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir --retries 10 --timeout 120 -r requirements.txt
+# BuildKit cache mount: downloaded wheels survive between builds (and failed attempts), and stay out of the image.
+RUN --mount=type=cache,target=/root/.cache/pip pip install --retries 10 --timeout 300 -r requirements.txt
 COPY backend/ backend/
 COPY data/ data/
 COPY --from=ui /ui/out frontend/out

@@ -21,7 +21,7 @@ def test_accuracy_shape_and_default_cutoff():
     assert r.status_code == 200
     body = r.json()
     assert body["cutoff"] == "09:00"
-    assert set(body) == {"cutoff", "overall", "by_day", "by_hour", "by_lead", "by_level", "histogram"}
+    assert set(body) == {"cutoff", "overall", "by_day", "by_hour", "by_lead", "by_level", "histogram", "day_ahead_lead_h"}
     assert "NaN" not in r.text and "Infinity" not in r.text
 
 
