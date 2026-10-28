@@ -1,6 +1,6 @@
 import pandas as pd
 
-from backend.analysis import accuracy, day_ahead, join, metrics
+from backend.analysis import accuracy, day, day_ahead, join, metrics
 
 T = lambda s: pd.Timestamp(s, tz="UTC")
 
@@ -32,3 +32,5 @@ def test_accuracy_breakdowns_cover_every_hour():
     for key in ("by_day", "by_hour", "by_level"):
         assert sum(x["n"] for x in r[key]) == n, key
     assert sum(b["count"] for b in r["histogram"]) == n
+    d = day("2026-01-15")
+    assert len(d["points"]) == 48 and d["metrics"]["n"] == 24  # half-hourly actuals, hourly forecasts

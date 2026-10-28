@@ -4,5 +4,8 @@
   "functions": {
     "api/index.py": { "includeFiles": "{backend,data}/**" }
   },
+  "headers": [
+    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, s-maxage=86400" }] }
+  ],
   "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
 }
