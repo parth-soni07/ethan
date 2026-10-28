@@ -74,6 +74,8 @@ def test_cors_allows_only_listed_origins(monkeypatch):
         assert ok.headers["access-control-allow-origin"] == "https://old-champagne.example"
         other = cors_client.get("/api/accuracy", headers={"Origin": "https://evil.example"})
         assert "access-control-allow-origin" not in other.headers
+        # cache safety: even a request without Origin must vary on it, so a CDN keys copies per origin
+        assert "Origin" in cors_client.get("/api/accuracy").headers["vary"]
     finally:
         monkeypatch.delenv("ALLOWED_ORIGINS")
         importlib.reload(app_module)

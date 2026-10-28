@@ -29,6 +29,10 @@ if ALLOWED_ORIGINS:
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers.update(SECURITY_HEADERS)
+    if ALLOWED_ORIGINS:
+        # The CORS middleware only varies on Origin when the request carries one; without this, an
+        # edge cache can serve a no-Origin copy (no CORS header) to the browser and the fetch fails.
+        response.headers.add_vary_header("Origin")
     return response
 
 
