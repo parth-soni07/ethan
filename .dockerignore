@@ -1,7 +1,5 @@
-**/node_modules
-frontend/out
 .venv
 .git
-frontend/.next
+__pycache__
 backend/test_*.py
 backend/conftest.py

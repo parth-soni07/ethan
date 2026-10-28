@@ -1,10 +1,3 @@
-FROM node:22-alpine AS ui
-WORKDIR /ui
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ .
-RUN npm run build
-
 FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
@@ -12,7 +5,6 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip pip install --retries 10 --timeout 300 -r requirements.txt
 COPY backend/ backend/
 COPY data/ data/
-COPY --from=ui /ui/out frontend/out
 USER nobody
 ENV PORT=8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \

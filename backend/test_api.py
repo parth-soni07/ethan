@@ -2,7 +2,10 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app import SECURITY_HEADERS, app, dist
+import importlib
+
+from backend import app as app_module
+from backend.app import SECURITY_HEADERS, app
 
 client = TestClient(app)
 
@@ -57,7 +60,20 @@ def test_security_headers(path):
     assert all(headers[k] == v for k, v in SECURITY_HEADERS.items())
 
 
-@pytest.mark.skipif(not dist.is_dir(), reason="frontend not built (cd frontend && npm run build)")
-def test_built_ui_is_served_and_cannot_escape_its_directory():
-    assert client.get("/").headers["content-type"].startswith("text/html")
-    assert client.get("/../backend/app.py").status_code == 404
+
+def test_cors_is_closed_by_default():
+    r = client.get("/api/accuracy", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_allows_only_listed_origins(monkeypatch):
+    monkeypatch.setenv("ALLOWED_ORIGINS", "https://old-champagne.example")
+    try:
+        cors_client = TestClient(importlib.reload(app_module).app)
+        ok = cors_client.get("/api/accuracy", headers={"Origin": "https://old-champagne.example"})
+        assert ok.headers["access-control-allow-origin"] == "https://old-champagne.example"
+        other = cors_client.get("/api/accuracy", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in other.headers
+    finally:
+        monkeypatch.delenv("ALLOWED_ORIGINS")
+        importlib.reload(app_module)

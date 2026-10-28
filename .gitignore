@@ -1,8 +1,4 @@
-node_modules/
-dist/
 .venv/
 __pycache__/
 .vercel
-*.tsbuildinfo
-out/
-.next/
+.pytest_cache/

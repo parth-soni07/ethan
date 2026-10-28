@@ -1,8 +1,8 @@
+import os
 from datetime import date as Date
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend import analysis
 
@@ -16,6 +16,13 @@ SECURITY_HEADERS = {
     "Content-Security-Policy": "frame-ancestors 'none'",
     "Referrer-Policy": "strict-origin-when-cross-origin",
 }
+
+
+# The UI (old-champagne) is a separate deploy. Cross-origin reads are allowed only for origins listed
+# in ALLOWED_ORIGINS (comma-separated); unset means same-origin only.
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if ALLOWED_ORIGINS:
+    app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_methods=["GET"])
 
 
 @app.middleware("http")
@@ -43,8 +50,3 @@ def accuracy(cutoff: str = CUTOFF):
 def api_not_found(rest: str):
     raise HTTPException(404, "Not Found")
 
-
-# Docker image serves the built UI too; on Vercel the static build is served by the CDN.
-dist = Path(__file__).resolve().parent.parent / "frontend" / "out"
-if dist.is_dir():
-    app.mount("/", StaticFiles(directory=dist, html=True), name="ui")

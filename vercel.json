@@ -1,6 +1,4 @@
 {
-  "buildCommand": "cd frontend && npm ci && npm run build",
-  "outputDirectory": "frontend/out",
   "functions": {
     "api/index.py": { "includeFiles": "{backend,data}/**" }
   },

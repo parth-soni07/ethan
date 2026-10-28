@@ -1,10 +1,11 @@
-# UK wind day-ahead forecast accuracy
+# ethan: UK wind day-ahead forecast API
 
-Shows the latest national wind forecast (Elexon BMRS `WINDFOR`) a buyer had at the day-ahead decision
-point, against actual wind generation (`FUELHH`, fuelType `WIND`). It also measures how wrong those
-forecasts were across January 2026.
+The backend of a pilot portal for a UK energy buyer. For each delivery day it returns the latest
+national wind forecast (Elexon BMRS `WINDFOR`) that was available at the day-ahead decision time, set
+against actual wind generation (`FUELHH`, fuelType `WIND`), and measures how wrong those forecasts
+were across January 2026.
 
-**Live app:** _TODO: Vercel URL_
+The UI lives in a separate repo: [old-champagne](https://github.com/parth-soni07/old-champagne).
 
 ## AI tools disclosure
 
@@ -16,7 +17,7 @@ and the analysis.
 
 - **Latest forecast available**: for each delivery day D (UK local), take the `WINDFOR` run with the
   greatest `publishTime` at or before **D-1 09:00 UK**. That is just before the 09:20 GB day-ahead
-  auction gate. You can change the cutoff with the `cutoff` query parameter or in the UI.
+  auction gate. You can change the cutoff with the `cutoff` query parameter.
 - **Error** = forecast − actual (MW). A positive error is an over-forecast, i.e. a shortfall the
   buyer must cover with extra (thermal) power.
 - **P90 shortfall**: the 90th percentile of error. Buying this many MW of extra power would have
@@ -35,38 +36,55 @@ forecast. It is a hypothesis: confirming it needs balancing-action data, which i
 brief's Elexon wind-only scope. A simulation test (`test_simulated_curtailment_shows_bias_growing_with_wind_level`)
 shows that capped output produces exactly this pattern.
 
+## API
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/accuracy?cutoff=HH:MM` | Month metrics (MAE, RMSE, bias, MAPE, P90 shortfall), by day / hour / lead time / forecast level, error histogram, day-ahead lead window |
+| `GET /api/day?date=YYYY-MM-DD&cutoff=HH:MM` | One delivery day: half-hourly actuals, the day-ahead forecast and its publish time, day metrics |
+| `GET /docs` | Interactive OpenAPI docs |
+
+`cutoff` defaults to `09:00` and must be `HH:MM`. `date` must fall inside the data (422 otherwise, with
+the valid range in the message). Unknown `/api` paths return a JSON 404.
+
 ## Layout
 
 | Path | What |
 |---|---|
+| `backend/analysis.py` | Day-ahead forecast selection (UK wall clock, clock-change safe) and accuracy metrics |
+| `backend/app.py` | FastAPI app: input validation, security headers, opt-in CORS |
 | `backend/fetch_data.py` | One-off pull of the January 2026 window from BMRS into `data/*.csv` |
-| `backend/analysis.py` | Day-ahead forecast selection + MAE/RMSE/bias/MAPE/P90, by day, hour, lead time and forecast level, plus an error histogram |
-| `backend/app.py` | FastAPI: `GET /api/day?date=&cutoff=`, `GET /api/accuracy?cutoff=`; also serves the built UI |
 | `backend/test_analysis.py` | Unit and edge-case tests: cutoff boundaries, UK clock changes, joins, metrics, real-data golden values |
 | `backend/test_simulation.py` | Simulation tests: a synthetic month with known bias and noise, checked against the right answer |
-| `backend/test_api.py` | HTTP contract, input validation (422s) and security headers |
+| `backend/test_api.py` | HTTP contract, input validation (422s), security headers, CORS |
 | `backend/test_fetch.py` | `fetch_data` dedupe and date windows with BMRS mocked out |
 | `api/index.py` | Vercel Python entrypoint |
-| `frontend/` | Next.js (App Router, static export) + Recharts UI; claymorphism surfaces on an Apple system palette |
 | `data/` | Committed BMRS snapshot (the data is historical, so it is not fetched live) |
 
 ## Run
 
 ```bash
-# Docker (API + UI on :8000)
-docker build -t wind . && docker run -p 8000:8000 wind
+# Docker (API on :8000)
+docker build -t ethan . && docker run -p 8000:8000 -e ALLOWED_ORIGINS=http://localhost:3000 ethan
 
-# Local dev (Python 3.12: pandas 2.2 has no wheels for 3.13+)
+# Local (Python 3.12: pandas 2.2 has no wheels for 3.13+)
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/uvicorn backend.app:app --reload        # API on :8000
-cd frontend && npm install && npm run dev          # UI on :3000, proxies /api to :8000
+ALLOWED_ORIGINS=http://localhost:3000 .venv/bin/uvicorn backend.app:app --reload
 
 # Tests (warnings are errors; config in pytest.ini) / refresh data
 .venv/bin/pytest -q
 .venv/bin/python -m backend.fetch_data
 ```
 
+## Configuration
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `ALLOWED_ORIGINS` | unset (same-origin only) | Comma-separated origins allowed to call the API from a browser, e.g. the old-champagne deploy URL |
+| `PORT` | `8000` | Port inside the Docker image |
+
 ## Deploy
 
-`vercel deploy`. `vercel.json` builds the Next.js UI as a static export (`frontend/out`) and runs `api/index.py` as a Python
-function. The Dockerfile is for local and container hosting (it runs on Heroku's container stack as-is).
+`vercel deploy`: `vercel.json` runs `api/index.py` as a Python function and caches API responses at
+the edge for a day (the data is static). Set `ALLOWED_ORIGINS` to the UI's URL. The Dockerfile also
+runs as-is on any container host (non-root user, health check).
